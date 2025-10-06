@@ -117,6 +117,11 @@ function TabNavigator() {
   );
 }
 
+// Loading screen component
+function LoadingScreen() {
+  return null;
+}
+
 function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -133,7 +138,14 @@ function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen}
+        options={{
+          gestureEnabled: false,
+          presentation: 'card'
+        }}
+      />
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
@@ -171,11 +183,8 @@ export default function Navigation() {
   const theme = useThemeColors();
   const { user, loading } = useAuth();
 
-  if (loading) {
-    // You can add a loading screen component here if needed
-    return null;
-  }
-
+  // ALWAYS show AppStack - don't switch navigators based on loading
+  // Switching navigators resets navigation state
   return (
     <NavigationContainer theme={theme.isDark ? NavigationDarkTheme : NavigationLightTheme} linking={{
       prefixes: ['carwashpro://'],

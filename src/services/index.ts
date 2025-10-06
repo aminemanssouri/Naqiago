@@ -3,6 +3,7 @@ export { authService } from './auth';
 export { servicesService } from './services';
 export { bookingsService } from './bookings';
 export { workersService } from './workers';
+export { paymentsService } from './payments';
 export { NaqiagoVehicleAPI } from './NaqiagoVehicleAPI';
 
 // Address services are exported as functions
