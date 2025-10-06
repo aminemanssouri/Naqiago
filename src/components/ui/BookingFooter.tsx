@@ -97,12 +97,14 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   continueButtonFullWidth: {
     flex: 1,
@@ -111,5 +113,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

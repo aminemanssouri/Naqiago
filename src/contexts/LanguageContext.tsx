@@ -918,7 +918,7 @@ const dictionaries: Record<AppLanguage, Dictionary> = {
     all_services_include_professional: 'Tous les services incluent un équipement professionnel et des produits écologiques',
     service_duration_varies: 'La durée du service varie selon les services sélectionnés (30-90 minutes)',
     you_can_modify_selection: 'Vous pouvez modifier votre sélection avant la confirmation finale',
-    start_booking_process: 'Commencer le processus de réservation',
+    start_booking_process: 'Commencer la réservation',
     // Booking Screen
     book_service_title: 'Réserver un service',
     loading_worker_details: 'Chargement des détails du travailleur...',
