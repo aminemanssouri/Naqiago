@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
 
@@ -8,12 +8,13 @@ import { Card } from '../components/ui/Card';
 import { FormInput } from '../components/ui/FormInput';
 import { Separator } from '../components/ui/Separator';
 import { loginValidation } from '../utils/validationSchemas';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, CommonActions, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '../lib/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../contexts/ModalContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNavigationContext } from '../contexts/NavigationContext';
 
 interface LoginFormData {
   email: string;
@@ -22,10 +23,12 @@ interface LoginFormData {
 
 export default function LoginScreen() {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const [showPassword, setShowPassword] = useState(false);
   // Single login method (email)
   const [isLoading, setIsLoading] = useState(false);
+  const [loginAttemptFailed, setLoginAttemptFailed] = useState(false);
   const theme = useThemeColors();
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
@@ -35,34 +38,127 @@ export default function LoginScreen() {
     }
   });
 
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const modal = useModal();
   const { t } = useLanguage();
+  const { clearPendingNavigation } = useNavigationContext();
+
+  // Block navigation after failed login attempt - AGGRESSIVE VERSION
+  useEffect(() => {
+    if (!isFocused) {
+      console.log('❌ Screen not focused, skipping navigation listener');
+      return;
+    }
+    
+    console.log('✅ Setting up navigation listener, loginAttemptFailed:', loginAttemptFailed);
+    
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      console.log('🔍 beforeRemove fired:', { 
+        loginAttemptFailed, 
+        hasUser: !!user, 
+        action: e.data.action.type,
+        canPrevent: e.preventDefault 
+      });
+      
+      if (loginAttemptFailed && !user) {
+        // Prevent navigation away from login screen after failed login
+        console.log('🚫 BLOCKING NAVIGATION - login failed, staying on Login screen');
+        e.preventDefault();
+        
+        // Don't clear the flag - keep blocking until user manually navigates
+        console.log('🔒 Navigation blocked - user must try again or click Continue as Guest');
+        return;
+      } else {
+        console.log('✅ Allowing navigation:', { 
+          reason: user ? 'user logged in' : 'no failed attempt' 
+        });
+      }
+    });
+
+    console.log('👂 Navigation listener attached, isFocused:', isFocused);
+    
+    return () => {
+      console.log('👋 Navigation listener cleanup');
+      unsubscribe();
+    };
+  }, [navigation, loginAttemptFailed, user, isFocused]);
+
+  // Clear any pending navigation when login screen mounts
+  useEffect(() => {
+    if (isFocused) {
+      console.log('📱 Login screen focused');
+    } else {
+      console.log('📴 Login screen unfocused, loginAttemptFailed:', loginAttemptFailed);
+      if (loginAttemptFailed) {
+        console.log('⚠️ Screen unfocusing during error state!');
+      }
+    }
+  }, [isFocused, loginAttemptFailed]);
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('🔐 Login attempt starting...');
     setIsLoading(true);
+    setLoginAttemptFailed(false);
     
     try {
       await signIn(data.email, data.password);
-      // Navigation will happen automatically when auth state changes
-      console.log('Login successful, auth state will handle navigation');
+      // Login successful - navigation will happen automatically when auth state changes
+      console.log('✅ Login successful, auth state will handle navigation');
+      setLoginAttemptFailed(false);
     } catch (error: any) {
-      console.error('Login failed:', error);
+      console.error('❌ Login failed:', error);
+      
+      // Mark that login failed
+      console.log('🚨 Setting loginAttemptFailed = true');
+      setLoginAttemptFailed(true);
+      
+      // Clear any pending navigation on error to prevent redirect
+      clearPendingNavigation();
+      console.log('🗑️ Cleared pending navigation');
+      
+      // Stay on login screen - prevent any navigation
+      setIsLoading(false);
+      
       const message = (error?.message as string) || t('check_credentials');
+      
+      console.log('📢 Showing error modal');
+      // Show error modal on current screen
       modal.show({
         type: 'warning',
         title: t('login_failed'),
         message,
       });
-      // Ensure we stay on login screen
+      
+      console.log('🛑 Login error handled, staying on screen');
+      // Don't throw - we've handled the error
       return;
-    } finally {
-      setIsLoading(false);
     }
+    // Note: Don't set isLoading to false here for successful login
+    // Let the auth state change handle the navigation
   };
 
   const handleContinueAsGuest = () => {
-    navigation.goBack();
+    console.log('👤 Continue as Guest clicked');
+    
+    // Clear the failed login flag to allow navigation
+    setLoginAttemptFailed(false);
+    console.log('🔓 Cleared loginAttemptFailed flag - allowing navigation');
+    
+    // Clear pending navigation and go back
+    clearPendingNavigation();
+    console.log('🗑️ Cleared pending navigation');
+    
+    // Small delay to ensure state updates
+    setTimeout(() => {
+      if (navigation.canGoBack()) {
+        console.log('⬅️ Going back');
+        navigation.goBack();
+      } else {
+        console.log('🏠 Navigating to MainTabs');
+        // If can't go back, navigate to main tabs
+        (navigation as any).navigate('MainTabs');
+      }
+    }, 50);
   };
 
   // Removed tabs (email only)

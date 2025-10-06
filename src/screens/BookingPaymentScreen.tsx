@@ -12,7 +12,7 @@ import { useThemeColors } from '../lib/theme';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useBooking } from '../contexts/BookingContext';
 import { useAuth } from '../contexts/AuthContext';
-import { bookingsService } from '../services/bookings';
+import { bookingsService, paymentsService } from '../services';
 import type { RootStackParamList } from '../types/navigation';
 
 // Payment methods will be translated dynamically in the component
@@ -128,6 +128,42 @@ export default function BookingPaymentScreen() {
 
       // Create booking in database
       const newBooking = await bookingsService.createBooking(user.id, createBookingData);
+      
+      console.log('✅ Booking created successfully:', {
+        id: newBooking.id,
+        booking_number: newBooking.booking_number,
+        customer_id: newBooking.customer_id,
+        worker_id: newBooking.worker_id,
+        total_price: newBooking.total_price
+      });
+
+      // Create payment record for the booking
+      try {
+        const payment = await paymentsService.createPayment({
+          bookingId: newBooking.id,
+          customerId: user.id,
+          workerId: bookingData.workerId,
+          amount: bookingData.finalPrice,
+          paymentMethod: selectedPayment as 'cash' | 'card' | 'mobile' | 'wallet',
+          // Optional: customize platform fee percentage (default is 15%)
+          // platformFeePercentage: 15
+        });
+
+        console.log('✅ Payment record created successfully:', {
+          id: payment.id,
+          booking_id: payment.booking_id,
+          amount: payment.amount,
+          payment_method: payment.payment_method,
+          status: payment.status,
+          platform_fee: payment.platform_fee,
+          worker_earnings: payment.worker_earnings
+        });
+      } catch (paymentError: any) {
+        // Log payment creation error but don't fail the booking
+        console.error('⚠️ Warning: Payment record creation failed:', paymentError);
+        console.error('Booking was created but payment record is missing');
+        // You might want to implement a retry mechanism or alert system here
+      }
       
       // Reset booking data and navigate to confirmation
       resetBookingData();
