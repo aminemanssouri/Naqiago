@@ -91,6 +91,11 @@ export default function LoginScreen() {
       console.log('📴 Login screen unfocused, loginAttemptFailed:', loginAttemptFailed);
       if (loginAttemptFailed) {
         console.log('⚠️ Screen unfocusing during error state!');
+      } else {
+        // Screen unfocused and no error = successful login navigation
+        // Clear the loading state
+        console.log('✅ Login successful - screen unfocused for navigation');
+        setIsLoading(false);
       }
     }
   }, [isFocused, loginAttemptFailed]);
@@ -103,8 +108,22 @@ export default function LoginScreen() {
     try {
       await signIn(data.email, data.password);
       // Login successful - navigation will happen automatically when auth state changes
-      console.log('✅ Login successful, auth state will handle navigation');
+      console.log('✅ Login successful, checking for pending navigation');
       setLoginAttemptFailed(false);
+      
+      // If no pending navigation, go to home after successful login
+      setTimeout(() => {
+        setIsLoading(false);
+        // Navigation will be handled by useAuthNavigation if there's a pendingNavigation
+        // Otherwise, manually navigate to home
+        if (navigation.canGoBack()) {
+          console.log('⬅️ Going back after successful login');
+          navigation.goBack();
+        } else {
+          console.log('🏠 Navigating to MainTabs after successful login');
+          (navigation as any).navigate('MainTabs');
+        }
+      }, 500); // Small delay to allow auth state to update
     } catch (error: any) {
       console.error('❌ Login failed:', error);
       
